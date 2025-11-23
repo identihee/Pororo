@@ -12,7 +12,7 @@ S타입 — 현대인의 스트레스 해소를 위한 서비스
 > 포로로.com은 AI가 개인의 정보를 분석해 **최적의 집중 타이머**를 제안하고, 사용자의 집중 성과를 실시간으로 캐릭터·공간 성장에 연결해 지속적인 동기를 부여하는 집중 관리 플랫폼입니다.
 
 ### 데모 · 리포지토리
-- GitHub: https://github.com/jinnarajin/Pororo
+- GitHub: https://github.com/identihee/Pororo
 - 시연 영상 (YouTube): [여기에 링크 삽입](https://www.youtube.com/watch?v=XEMfDefjch0&feature=youtu.be)
 ---
 ### 서비스 개요
