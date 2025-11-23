@@ -14,21 +14,34 @@ def get_db_connection():
     return conn
 
 def init_db():
-    """테이블을 생성하고 DB를 초기화합니다."""
+    """테이블을 생성하고 DB를 초기화합니다. 스키마 마이그레이션도 처리합니다."""
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # 1. 테이블 생성 (없을 경우)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS sessions (
             id INTEGER PRIMARY KEY,
             user_id TEXT NOT NULL,
-            theme TEXT NOT NULL,           -- 테마(운동, 공부, 일) 추가
+            theme TEXT NOT NULL,
             is_focus BOOLEAN NOT NULL,
             planned_duration INTEGER NOT NULL,
             actual_duration INTEGER NOT NULL,
             timestamp TEXT NOT NULL
         )
     ''')
-    # TODO: 향후 스탯 및 아이템 해금 테이블도 추가
+    
+    # 2. 스키마 마이그레이션: 'theme' 컬럼이 없는 경우 추가
+    cursor.execute("PRAGMA table_info(sessions)")
+    columns = [info[1] for info in cursor.fetchall()]
+    
+    if 'theme' not in columns:
+        print("Migrating DB: Adding 'theme' column...")
+        try:
+            cursor.execute("ALTER TABLE sessions ADD COLUMN theme TEXT DEFAULT 'study'")
+        except Exception as e:
+            print(f"Migration failed: {e}")
+
     conn.commit()
     conn.close()
 

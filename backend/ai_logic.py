@@ -20,6 +20,7 @@ def get_smart_recommendation(theme):
     if not df.empty:
         # Ensure is_focus is numeric
         df['is_focus'] = pd.to_numeric(df['is_focus'], errors='coerce')
+        # Filter for focus sessions (1)
         focus_df = df[df['is_focus'] == 1].copy()
     else:
         focus_df = pd.DataFrame()
@@ -32,10 +33,18 @@ def get_smart_recommendation(theme):
         pass
     else:
         # 2. 직전 세션 분석 (가장 최근 세션)
+        # timestamp가 문자열이므로 정렬이 올바르게 되도록 보장
+        focus_df['timestamp'] = pd.to_datetime(focus_df['timestamp'])
         last_session = focus_df.sort_values(by='timestamp', ascending=False).iloc[0]
-        planned = last_session['planned_duration']
-        actual = last_session['actual_duration']
-        achievement_rate = actual / planned
+        
+        planned = int(last_session['planned_duration'])
+        actual = int(last_session['actual_duration'])
+        
+        # 0으로 나누기 방지
+        if planned > 0:
+            achievement_rate = actual / planned
+        else:
+            achievement_rate = 0
         
         # 3. 스마트 규칙 적용
         if achievement_rate >= SUCCESS_THRESHOLD:
@@ -49,6 +58,7 @@ def get_smart_recommendation(theme):
         else:
              # 평균 회귀: 중간 달성률은 현재 시간 유지
              recommended_focus = planned
+             message = f"꾸준함이 재능입니다! **{theme}** 페이스를 유지해보세요."
              
         # TODO: 향후 요일/시간대 분석 규칙 추가 가능
         
