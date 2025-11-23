@@ -54,26 +54,24 @@ const CharacterStats = ({ totalFocusTime, canvasHeight = 350, showDetails = true
     const loadModels = async () => {
       try {
         // 1. Load Background (Autumn Scene)
-        // Note: Ensure the file is in the public folder
         try {
           const bgGltf = await loader.loadAsync('/Autumn_Serenity_1116113048_texture.glb');
           const bgModel = bgGltf.scene;
           
           // Scale and position background
-          // We need to normalize the scale so it fits nicely
           const box = new THREE.Box3().setFromObject(bgModel);
           const size = box.getSize(new THREE.Vector3());
           const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 15 / maxDim; // Scale to roughly 15 units wide
+          const scale = 20 / maxDim; // Make background large
           bgModel.scale.set(scale, scale, scale);
-          bgModel.position.y = -2; // Move down slightly
+          bgModel.position.set(0, -2, -5); // Push back and down
           group.add(bgModel);
         } catch (err) {
           console.warn("Background GLB failed to load:", err);
-          // Fallback: Add a simple ground plane if background fails
+          // Fallback Ground
           const plane = new THREE.Mesh(
-            new THREE.PlaneGeometry(20, 20),
-            new THREE.MeshStandardMaterial({ color: 0x90ee90 })
+            new THREE.PlaneGeometry(50, 50),
+            new THREE.MeshStandardMaterial({ color: 0x8bc34a })
           );
           plane.rotation.x = -Math.PI / 2;
           plane.position.y = -2;
@@ -89,7 +87,7 @@ const CharacterStats = ({ totalFocusTime, canvasHeight = 350, showDetails = true
           const box = new THREE.Box3().setFromObject(charModel);
           const size = box.getSize(new THREE.Vector3());
           const maxDim = Math.max(size.x, size.y, size.z);
-          const targetSize = 3.5; // Target height/width
+          const targetSize = 4.0; // Make character prominent
           const scale = targetSize / maxDim;
           
           charModel.scale.set(scale, scale, scale);
@@ -97,12 +95,12 @@ const CharacterStats = ({ totalFocusTime, canvasHeight = 350, showDetails = true
           // Center the character
           const center = box.getCenter(new THREE.Vector3());
           charModel.position.x = -center.x * scale;
-          charModel.position.y = -center.y * scale - 1.0; // Adjust height to stand on ground
-          charModel.position.z = -center.z * scale + 1; // Bring slightly forward
+          charModel.position.y = -center.y * scale - 2.0; // Stand on ground (y=-2)
+          charModel.position.z = -center.z * scale + 2; // Bring forward
 
           group.add(charModel);
 
-          // Setup Animation if available
+          // Setup Animation
           if (charGltf.animations && charGltf.animations.length > 0) {
             mixer = new THREE.AnimationMixer(charModel);
             const action = mixer.clipAction(charGltf.animations[0]);
@@ -110,7 +108,12 @@ const CharacterStats = ({ totalFocusTime, canvasHeight = 350, showDetails = true
           }
         } catch (err) {
           console.error("Character GLB failed to load:", err);
-          throw new Error("캐릭터 모델을 불러오지 못했습니다.");
+          // Fallback Cube if character fails
+          const cube = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 1, 1),
+            new THREE.MeshStandardMaterial({ color: 0xff0000 })
+          );
+          group.add(cube);
         }
 
         setLoading(false);

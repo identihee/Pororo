@@ -17,7 +17,7 @@ def get_smart_recommendation(theme):
     df = load_user_sessions(theme=theme)
     focus_df = df[df['is_focus'] == 1].copy()
     
-    recommended_focus = 25 # 기본 시작 시간
+    recommended_focus = 25 # 기본 시작 시간 (표준 뽀모도로)
     message = f"새로운 {theme} 집중 세션을 시작해 보세요!"
 
     if focus_df.empty:

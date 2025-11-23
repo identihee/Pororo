@@ -11,8 +11,8 @@ const API_URL = 'http://127.0.0.1:5000/api';
 // Small stat card component used by the right column
 function StatCard({ title, exp = 0, color = '#2b6b3a' }) {
   const total = Math.max(0, exp || 0);
-  const level = Math.floor(total / 100) + 1;
-  const percent = total % 100;
+  const level = Math.floor(total / 60) + 1; // 60분마다 레벨업
+  const percent = Math.floor(((total % 60) / 60) * 100);
   return (
     <div style={{ padding: 12, borderRadius: 12, background: '#fff', boxShadow: '0 6px 14px rgba(0,0,0,0.04)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -24,7 +24,7 @@ function StatCard({ title, exp = 0, color = '#2b6b3a' }) {
         <div style={{ height: 10, background: '#f0f0f0', borderRadius: 8, overflow: 'hidden' }}>
           <div style={{ width: `${percent}%`, height: '100%', background: color }} />
         </div>
-        <div style={{ marginTop: 6, fontSize: 12, color: '#666' }}>{percent}%</div>
+        <div style={{ marginTop: 6, fontSize: 12, color: '#666' }}>{percent}% ({total}분)</div>
       </div>
     </div>
   );
@@ -42,15 +42,27 @@ function App() {
   // 2. 총 집중 시간 (분 단위)
   const [totalFocusTime, setTotalFocusTime] = useState(0); 
 
+  // BigTimer modal state and mode chooser
+  const [showBigTimer, setShowBigTimer] = useState(false);
+  const [choosingMode, setChoosingMode] = useState(false);
+  const [selectedMode, setSelectedMode] = useState('study'); // 'study', 'exercise', 'work'
+
+  // Stats / EXP state (Backend synced)
+  const [stats, setStats] = useState({
+    intelligence: { exp: 0 },
+    strength: { exp: 0 },
+    focusStat: { exp: 0 },
+  });
+
   // 1. AI 추천 시간을 백엔드로부터 가져오는 함수
-  const fetchRecommendation = async () => {
+  const fetchRecommendation = async (theme) => {
     try {
-      const response = await fetch(`${API_URL}/session/recommendation`);
+      const response = await fetch(`${API_URL}/session/recommendation?theme=${theme}`);
       if (!response.ok) throw new Error('API 요청 실패');
       
       const data = await response.json();
       setAiRecommendation(data);
-      console.log("AI 추천 시간 업데이트:", data);
+      console.log(`AI 추천 시간 업데이트 (${theme}):`, data);
     } catch (error) {
       console.error("추천 시간을 가져오는 중 오류 발생:", error);
       // 오류 시 기본값 설정
@@ -62,8 +74,30 @@ function App() {
     }
   };
 
-  // 2. 세션 종료 기록을 백엔드에 전송하는 함수
-  const postSessionEnd = async (isFocus, plannedDuration, actualDuration) => {
+  // 2. 스탯 정보를 백엔드로부터 가져오는 함수
+  const fetchStats = async () => {
+    try {
+      const response = await fetch(`${API_URL}/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        // Backend returns: { intelligence, strength, focus }
+        // Map to frontend state structure
+        setStats({
+          intelligence: { exp: data.intelligence },
+          strength: { exp: data.strength },
+          focusStat: { exp: data.focus }, 
+        });
+        // Update total focus time based on sum of all stats
+        const total = data.intelligence + data.strength + data.focus;
+        setTotalFocusTime(total);
+      }
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+
+  // 3. 세션 종료 기록을 백엔드에 전송하는 함수
+  const postSessionEnd = async (isFocus, plannedDuration, actualDuration, theme) => {
     try {
       const response = await fetch(`${API_URL}/session/end`, {
         method: 'POST',
@@ -74,17 +108,18 @@ function App() {
           is_focus: isFocus,
           planned_duration: plannedDuration,
           actual_duration: actualDuration,
+          theme: theme
         }),
       });
 
       if (!response.ok) throw new Error('세션 기록 저장 실패');
       
-      console.log(`세션 기록 성공: ${isFocus ? '집중' : '휴식'} ${actualDuration}분`);
+      console.log(`세션 기록 성공: ${isFocus ? '집중' : '휴식'} ${actualDuration}분 (${theme})`);
       
-      // 기록이 성공하면, 바로 새로운 추천 시간을 요청합니다.
+      // 기록이 성공하면, 스탯과 추천 시간을 갱신합니다.
       if (isFocus) {
-        setTotalFocusTime(prev => prev + actualDuration);
-        await fetchRecommendation();
+        await fetchStats();
+        await fetchRecommendation(theme);
       }
 
     } catch (error) {
@@ -94,27 +129,22 @@ function App() {
 
   // --- 라이프사이클 및 이벤트 핸들러 ---
 
-  // 컴포넌트 마운트 시 최초 1회 추천 시간 요청
+  // 컴포넌트 마운트 시 최초 데이터 로드
   useEffect(() => {
-    fetchRecommendation();
+    fetchRecommendation(selectedMode);
+    fetchStats();
   }, []); 
+
+  // 모드 변경 시 추천 시간 다시 로드
+  useEffect(() => {
+    fetchRecommendation(selectedMode);
+  }, [selectedMode]);
 
   // 세션 종료 시 호출되어 백엔드에 기록하고 AI 추천을 업데이트하는 함수
   const handleSessionEnd = (isFocus, plannedDuration, actualDuration) => {
     // 실제 사용자가 완료한 시간(actualDuration)을 백엔드로 보냅니다.
-    postSessionEnd(isFocus, plannedDuration, actualDuration);
+    postSessionEnd(isFocus, plannedDuration, actualDuration, selectedMode);
   };
-
-  // BigTimer modal state and mode chooser
-  const [showBigTimer, setShowBigTimer] = useState(false);
-  const [choosingMode, setChoosingMode] = useState(false);
-  const [selectedMode, setSelectedMode] = useState('study');
-  // Stats / EXP state (totalExp stored as integer; 100 XP == next level)
-  const [stats, setStats] = useState({
-    intelligence: { exp: 120 },
-    strength: { exp: 40 },
-    focusStat: { exp: 75 },
-  });
 
   const [quests, setQuests] = useState([
     { id: 1, title: '짧은 공부하기', desc: '20분 공부 세션 완료', stat: 'focusStat', reward: 30, completed: false },
@@ -122,18 +152,32 @@ function App() {
     { id: 3, title: '퀵 리서치', desc: '15분 자료 조사', stat: 'intelligence', reward: 25, completed: false },
   ]);
 
-  const addExp = (statKey, amount) => {
-    setStats(prev => {
-      const prevExp = prev[statKey]?.exp || 0;
-      return { ...prev, [statKey]: { exp: prevExp + amount } };
-    });
-  };
+  const claimQuest = async (questId) => {
+    const quest = quests.find(q => q.id === questId);
+    if (!quest || quest.completed) return;
 
-  const claimQuest = (questId) => {
-    setQuests(prev => prev.map(q => q.id === questId ? { ...q, completed: true } : q));
-    const q = quests.find(x => x.id === questId);
-    if (q && !q.completed) {
-      addExp(q.stat, q.reward);
+    try {
+      const response = await fetch(`${API_URL}/quest/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quest_id: questId,
+          stat_type: quest.stat,
+          reward: quest.reward
+        })
+      });
+
+      if (response.ok) {
+        // 로컬 상태 업데이트
+        setQuests(prev => prev.map(q => q.id === questId ? { ...q, completed: true } : q));
+        // 스탯 갱신
+        fetchStats();
+        alert(`퀘스트 완료! ${quest.reward} EXP 획득!`);
+      } else {
+        console.error("퀘스트 보상 수령 실패");
+      }
+    } catch (error) {
+      console.error("퀘스트 요청 중 오류:", error);
     }
   };
 
@@ -162,19 +206,19 @@ function App() {
               {/* Intelligence card (left side) - summary */}
               <div style={{ padding: 18, borderRadius: 12, background: '#fff7d6', boxShadow: '0 6px 14px rgba(0,0,0,0.06)' }}>
                 <div style={{ fontSize: 14, color: '#a67a00', fontWeight: 800 }}>지력</div>
-                <div style={{ fontSize: 26, color: '#d08f00', fontWeight: 900 }}>Lv. {Math.floor((stats.intelligence.exp||0)/100)+1}</div>
+                <div style={{ fontSize: 26, color: '#d08f00', fontWeight: 900 }}>Lv. {Math.floor((stats.intelligence.exp||0)/60)+1}</div>
               </div>
 
               {/* Strength card (left side) - summary */}
               <div style={{ padding: 18, borderRadius: 12, background: '#ffecec', boxShadow: '0 6px 14px rgba(0,0,0,0.06)' }}>
                 <div style={{ fontSize: 14, color: '#8b1f1f', fontWeight: 800 }}>근력</div>
-                <div style={{ fontSize: 26, color: '#c62828', fontWeight: 900 }}>Lv. {Math.floor((stats.strength.exp||0)/100)+1}</div>
+                <div style={{ fontSize: 26, color: '#c62828', fontWeight: 900 }}>Lv. {Math.floor((stats.strength.exp||0)/60)+1}</div>
               </div>
 
               {/* Focus card (left side) - summary */}
               <div style={{ padding: 18, borderRadius: 12, background: '#e8f3ff', boxShadow: '0 6px 14px rgba(0,0,0,0.06)' }}>
                 <div style={{ fontSize: 14, color: '#144f86', fontWeight: 800 }}>집중력</div>
-                <div style={{ fontSize: 26, color: '#1565c0', fontWeight: 900 }}>{`Lv. ${Math.floor((stats.focusStat.exp||0)/100)+1}`}</div>
+                <div style={{ fontSize: 26, color: '#1565c0', fontWeight: 900 }}>{`Lv. ${Math.floor((stats.focusStat.exp||0)/60)+1}`}</div>
               </div>
             </div>
           </div>
@@ -236,11 +280,11 @@ function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Right-side: detailed stat cards with progress bars and Quest area */}
 
-              <StatCard title="지력" statKey="intelligence" exp={stats.intelligence.exp} color="#d08f00" />
+              <StatCard title="지력" exp={stats.intelligence.exp} color="#d08f00" />
 
-              <StatCard title="근력" statKey="strength" exp={stats.strength.exp} color="#c62828" />
+              <StatCard title="근력" exp={stats.strength.exp} color="#c62828" />
 
-              <StatCard title="집중력" statKey="focus" statKeyReal="focusStat" exp={stats.focusStat.exp} color="#1565c0" />
+              <StatCard title="집중력" exp={stats.focusStat.exp} color="#1565c0" />
 
               <div className="quests" style={{ marginTop: 8, padding: 14, borderRadius: 12, background: '#f6fff6', boxShadow: '0 6px 14px rgba(0,0,0,0.04)' }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#2b6b3a', marginBottom: 8 }}>퀘스트</div>
