@@ -13,7 +13,7 @@ S타입 — 현대인의 스트레스 해소를 위한 서비스
 
 ### 데모 · 리포지토리
 - GitHub: https://github.com/jinnarajin/Pororo
-- 시연 영상 (YouTube): [여기에 링크 삽입]
+- 시연 영상 (YouTube): [여기에 링크 삽입](https://www.youtube.com/watch?v=XEMfDefjch0&feature=youtu.be)
 ---
 ### 서비스 개요
 #### 왜 이 서비스를 만들었나 - 타 서비스와 차별점
@@ -53,7 +53,7 @@ S타입 — 현대인의 스트레스 해소를 위한 서비스
   - 성취가 시각적으로 즉시 보상되어 작은 성공들이 누적되는 경험 제공
 
 #### 기술 스택
-- 프론트엔드: TypeScript, React
+- 프론트엔드: JavaScript, React
 - 백엔드: Flask (Python)
 - 데이터: 로컬 DB 연동
 - AI: 사용자 로그 기반 규칙기반
@@ -92,7 +92,7 @@ S타입 — 현대인의 스트레스 해소를 위한 서비스
 
 피드백 요청 / 협업 제안
 - 기능 제안, 사용성 피드백, 디자인/AI 개선 아이디어 언제든 환영합니다.  
-- GitHub Issues로 이슈를 남겨주세요: https://github.com/jinnarajin/Pororo/issues
+
 
 감사의 말씀
 우리 서비스는 ‘작은 성취가 쌓여 큰 변화를 만드는 경험’을 목표로 합니다. 심사위원님들의 관심과 조언은 서비스의 방향성을 다듬는 데 큰 힘이 됩니다. 감사합니다.
