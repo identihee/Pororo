@@ -6,7 +6,7 @@ import PomodoroTimer from './PomodoroTimer';
 import BigTimer from './BigTimer';
 import './App.css'; // 기본 CSS 파일
 
-const API_URL = 'http://127.0.0.1:5000/api';
+const API_URL = 'http://127.0.0.1:5001/api';
 
 // Small stat card component used by the right column
 function StatCard({ title, exp = 0, color = '#2b6b3a' }) {

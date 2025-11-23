@@ -121,4 +121,5 @@ def get_stats():
 
 if __name__ == '__main__':
     init_db() # 서버 시작 시 DB 초기화
-    app.run(debug=True, port=5000)
+    print("Starting Flask server on port 5001...")
+    app.run(debug=True, port=5001)
