@@ -115,9 +115,13 @@ function App() {
         }),
       });
 
-      if (!response.ok) throw new Error('세션 기록 저장 실패');
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.message || '세션 기록 저장 실패');
+      }
       
       console.log(`세션 기록 성공: ${isFocus ? '집중' : '휴식'} ${actualDuration}분 (${theme})`);
+      alert(`💾 세션이 저장되었습니다! (${actualDuration}분)`);
       
       // 기록이 성공하면, 스탯과 추천 시간을 갱신합니다.
       if (isFocus) {
@@ -127,6 +131,7 @@ function App() {
 
     } catch (error) {
       console.error("세션 기록 중 오류 발생:", error);
+      alert(`⚠️ 서버 연결 오류: 기록이 저장되지 않았습니다.\n(${error.message})`);
     }
   };
 
