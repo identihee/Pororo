@@ -66,47 +66,30 @@ const PomodoroTimer = ({ onSessionEnd, aiRecommendation }) => {
   const currentMode = isFocusing ? '집중' : '휴식';
 
   return (
-    // ... (UI 렌더링 코드는 이전과 동일, aiRecommendation prop을 사용하도록 업데이트됨)
-    <div style={{ /* ... style */ }}>
-      <h3 style={{ color: '#d32f2f' }}>🍅 AI 맞춤 뽀모도로 ({currentMode} 모드)</h3>
-      <p style={{ fontWeight: 'bold' }}>
-        추천: **{isFocusing ? aiRecommendation.recommended_focus : aiRecommendation.recommended_rest}분**
-      </p>
-      
-      {/* ... 타이머 및 버튼 UI ... */}
-      <div style={{ 
-          /* ... style */
-          color: isFocusing ? '#e53935' : '#43a047',
-          border: `4px solid ${isFocusing ? '#e53935' : '#43a047'}`,
-          /* ... style */
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* Recommendation shown as e.g. '25minute' centered */}
+      <div style={{ marginBottom: 8, fontWeight: 800, color: '#6b6b6b' }}>{`${aiRecommendation.recommended_focus}minute`}</div>
+
+      {/* Timer display - pastel rounded card instead of colored border */}
+      <div style={{
+        width: 420,
+        maxWidth: '100%',
+        textAlign: 'center',
+        padding: '28px 12px',
+        borderRadius: 18,
+        background: 'linear-gradient(180deg, #fffaf3, #f7fff6)',
+        boxShadow: '0 12px 30px rgba(15,40,20,0.06)'
       }}>
-        {displayTime}
+        <div style={{ fontSize: 64, fontWeight: 900, color: '#2b5d2b', letterSpacing: 2 }}>{displayTime}</div>
+
+        <div style={{ marginTop: 18, display: 'flex', gap: 10, justifyContent: 'center' }}>
+          <button onClick={() => setIsRunning(prev => !prev)} style={{ padding: '10px 16px', borderRadius: 12, background: '#fff6e6', border: '1px solid #f1d7a6', fontWeight: 800, cursor: 'pointer' }}>{isRunning ? '⏸️ 일시 정지' : '▶️ 시작'}</button>
+
+          <button onClick={() => { setIsRunning(false); setIsFocusing(true); setTimeRemaining(aiRecommendation.recommended_focus * 60); }} style={{ padding: '10px 12px', borderRadius: 12, background: '#eef6ff', border: '1px solid #cfe1ff', fontWeight: 700, cursor: 'pointer' }}>🔄 리셋</button>
+        </div>
+
+        <p style={{ marginTop: 12, fontStyle: 'italic', color: '#6b6b6b' }}>{isFocusing ? '열심히 집중하고 섬을 키워보아요!' : '새참 먹고 잠시 쉬어가세요!'}</p>
       </div>
-      
-      {/* 컨트롤 버튼 */}
-      <div style={{ marginTop: '20px' }}>
-        <button 
-          onClick={() => setIsRunning(prev => !prev)}
-          // ... (스타일 생략)
-        >
-          {isRunning ? '⏸️ 일시 정지' : '▶️ 시작'}
-        </button>
-        
-        <button 
-          onClick={() => {
-            setIsRunning(false);
-            setIsFocusing(true);
-            setTimeRemaining(aiRecommendation.recommended_focus * 60);
-          }}
-          // ... (스타일 생략)
-        >
-          🔄 리셋
-        </button>
-      </div>
-      
-      <p style={{ marginTop: '15px', fontStyle: 'italic', color: '#757575' }}>
-        {isFocusing ? '열심히 집중하고 섬을 키워보아요!' : '새참 먹고 잠시 쉬어가세요!'}
-      </p>
     </div>
   );
 };
