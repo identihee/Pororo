@@ -57,7 +57,8 @@ function App() {
   // 1. AI 추천 시간을 백엔드로부터 가져오는 함수
   const fetchRecommendation = async (theme) => {
     try {
-      const response = await fetch(`${API_URL}/session/recommendation?theme=${theme}`);
+      // Cache busting을 위해 timestamp 추가
+      const response = await fetch(`${API_URL}/session/recommendation?theme=${theme}&_t=${new Date().getTime()}`);
       if (!response.ok) throw new Error('API 요청 실패');
       
       const data = await response.json();
@@ -77,9 +78,11 @@ function App() {
   // 2. 스탯 정보를 백엔드로부터 가져오는 함수
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API_URL}/stats`);
+      // Cache busting을 위해 timestamp 추가
+      const response = await fetch(`${API_URL}/stats?_t=${new Date().getTime()}`);
       if (response.ok) {
         const data = await response.json();
+        console.log("Stats fetched:", data); // Debug log
         // Backend returns: { intelligence, strength, focus }
         // Map to frontend state structure
         setStats({
@@ -224,7 +227,7 @@ function App() {
           </div>
 
           <div style={{ width: '56%', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: '80%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
               <CharacterStats totalFocusTime={totalFocusTime} canvasHeight={420} showDetails={false} />
 
               {/* Center area: character only. Keep only the "타이머 시작하기" button below the character (no center timer card) */}
