@@ -1,83 +1,58 @@
 // src/CharacterStats.jsx
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 
 const CharacterStats = ({ totalFocusTime, canvasHeight = 350, showDetails = true }) => {
   const mountRef = useRef(null);
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    const container = mountRef.current;
+    if (!container) return;
 
-  useEffect(() => {
-    const currentMount = mountRef.current;
-    if (!currentMount) return;
+    // === 1. Initialize Dimensions ===
+    // Force a minimum size if clientWidth is 0 (e.g. hidden or not laid out yet)
+    const width = container.clientWidth || 300;
+    const height = container.clientHeight || canvasHeight;
 
-    // Debug: Check if mount has dimensions
-    console.log("Mount dimensions:", currentMount.clientWidth, currentMount.clientHeight);
-
-    // === Three.js Setup ===
+    // === 2. Scene Setup ===
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87CEEB); // Explicit Sky Blue Background
+    scene.background = new THREE.Color(0x87CEEB); // Sky Blue Background
 
-    // Camera setup
-    const camera = new THREE.PerspectiveCamera(
-      50, 
-      currentMount.clientWidth / currentMount.clientHeight,
-      0.1,
-      1000
-    );
-    camera.position.set(0, 2, 8); 
+    // === 3. Camera Setup ===
+    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+    camera.position.set(0, 3, 8);
     camera.lookAt(0, 0, 0);
 
-    // Renderer setup
+    // === 4. Renderer Setup ===
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
+    renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
-    
-    // Clear and append
-    while (currentMount.firstChild) {
-      currentMount.removeChild(currentMount.firstChild);
-    }
-    currentMount.appendChild(renderer.domElement);
-    
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); 
-    scene.add(ambientLight);
 
+    // Clear any existing canvas
+    container.innerHTML = '';
+    container.appendChild(renderer.domElement);
+
+    // === 5. Lighting ===
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+    scene.add(ambientLight);
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
     dirLight.position.set(5, 10, 7);
     scene.add(dirLight);
 
-    // === Simple Scene for Debugging/Stability ===
+    // === 6. Procedural Content (Animal Crossing Style) ===
     const islandGroup = new THREE.Group();
     scene.add(islandGroup);
 
-    // 1. Ground
-    const groundGeo = new THREE.CylinderGeometry(6, 6, 0.5, 32);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0x95e06c });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
+    // Ground
+    const ground = new THREE.Mesh(
+      new THREE.CylinderGeometry(6, 6, 1, 32),
+      new THREE.MeshLambertMaterial({ color: 0x95e06c })
+    );
     ground.position.y = -2;
     islandGroup.add(ground);
 
-    // 2. Simple Tree
-    const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.3, 0.4, 1.5, 8),
-      new THREE.MeshLambertMaterial({ color: 0x8B4513 })
-    );
-    trunk.position.set(-2, -1, 0);
-    islandGroup.add(trunk);
-    
-    const leaves = new THREE.Mesh(
-      new THREE.ConeGeometry(1.5, 2.5, 8),
-      new THREE.MeshLambertMaterial({ color: 0x4caf50 })
-    );
-    leaves.position.set(-2, 0.5, 0);
-    islandGroup.add(leaves);
-
-    // 3. Character (Simple Shapes)
+    // Character Group
     const charGroup = new THREE.Group();
     
     // Head
@@ -88,6 +63,16 @@ const CharacterStats = ({ totalFocusTime, canvasHeight = 350, showDetails = true
     head.position.y = 0.5;
     charGroup.add(head);
 
+    // Eyes
+    const eyeGeo = new THREE.SphereGeometry(0.1, 16, 16);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+    leftEye.position.set(-0.25, 0.6, 0.7);
+    charGroup.add(leftEye);
+    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+    rightEye.position.set(0.25, 0.6, 0.7);
+    charGroup.add(rightEye);
+
     // Body
     const body = new THREE.Mesh(
       new THREE.CylinderGeometry(0.5, 0.7, 1.2, 16),
@@ -96,44 +81,80 @@ const CharacterStats = ({ totalFocusTime, canvasHeight = 350, showDetails = true
     body.position.y = -0.6;
     charGroup.add(body);
 
-    charGroup.position.set(0, -0.5, 1);
+    // Arms
+    const armGeo = new THREE.CapsuleGeometry(0.15, 0.6, 4, 8);
+    const armMat = new THREE.MeshLambertMaterial({ color: 0xff6b6b });
+    const leftArm = new THREE.Mesh(armGeo, armMat);
+    leftArm.position.set(-0.7, -0.4, 0);
+    leftArm.rotation.z = 0.5;
+    charGroup.add(leftArm);
+    const rightArm = new THREE.Mesh(armGeo, armMat);
+    rightArm.position.set(0.7, -0.4, 0);
+    rightArm.rotation.z = -0.5;
+    charGroup.add(rightArm);
+
+    charGroup.position.y = -0.5;
     islandGroup.add(charGroup);
 
-    // Animation Loop
+    // Trees
+    const addTree = (x, z) => {
+      const tree = new THREE.Group();
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.3, 1.5, 8),
+        new THREE.MeshLambertMaterial({ color: 0x8B4513 })
+      );
+      trunk.position.y = 0.75;
+      tree.add(trunk);
+      const leaves = new THREE.Mesh(
+        new THREE.ConeGeometry(1.2, 2, 8),
+        new THREE.MeshLambertMaterial({ color: 0x4caf50 })
+      );
+      leaves.position.y = 2;
+      tree.add(leaves);
+      tree.position.set(x, -2, z);
+      islandGroup.add(tree);
+    };
+    addTree(-3, -2);
+    addTree(3, -1);
+
+    // === 7. Animation Loop ===
     let animationId;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
       
       const time = Date.now() * 0.002;
-      charGroup.position.y = -0.5 + Math.sin(time * 3) * 0.1; // Bounce
-      islandGroup.rotation.y = Math.sin(time * 0.5) * 0.1; // Rotate island
+      
+      // Character idle
+      charGroup.position.y = -0.5 + Math.sin(time * 3) * 0.05;
+      leftArm.rotation.x = Math.sin(time * 3) * 0.2;
+      rightArm.rotation.x = -Math.sin(time * 3) * 0.2;
+
+      // Island rotate
+      islandGroup.rotation.y = Math.sin(time * 0.2) * 0.1;
 
       renderer.render(scene, camera);
     };
     animate();
 
-    // Resize Handler
+    // === 8. Resize Handler ===
     const handleResize = () => {
-      if (!currentMount) return;
-      const width = currentMount.clientWidth;
-      const height = currentMount.clientHeight;
-      
-      camera.aspect = width / height;
+      if (!container) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
     };
-
     window.addEventListener('resize', handleResize);
 
+    // Cleanup
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
-      if (currentMount.contains(renderer.domElement)) {
-        currentMount.removeChild(renderer.domElement);
-      }
       renderer.dispose();
+      // Optional: scene.clear() if needed
     };
-  }, [canvasHeight, isMounted]); // Re-run when mounted
+  }, [canvasHeight]);
 
   const hours = Math.floor(totalFocusTime / 60);
   const minutes = totalFocusTime % 60;
@@ -158,7 +179,7 @@ const CharacterStats = ({ totalFocusTime, canvasHeight = 350, showDetails = true
           height: `${canvasHeight}px`, 
           borderRadius: '12px',
           overflow: 'hidden',
-          backgroundColor: '#87CEEB', // Fallback color
+          backgroundColor: '#87CEEB', // Fallback background color (Sky Blue)
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
         }}
       >
