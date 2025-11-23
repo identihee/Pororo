@@ -2,6 +2,7 @@
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import pandas as pd
 from db import init_db, save_session_record, load_user_sessions
 from ai_logic import get_smart_recommendation
 
@@ -19,26 +20,32 @@ def before_request():
 def post_session_end():
     """사용자의 집중/휴식 세션 기록을 데이터베이스에 저장합니다."""
     data = request.json
+    print(f"Received session end data: {data}") # Debug log
     
     # 필수 데이터 검증
     if not all(k in data for k in ['is_focus', 'planned_duration', 'actual_duration']):
         return jsonify({"message": "누락된 데이터가 있습니다."}), 400
 
-    is_focus = data['is_focus']
+    # Boolean to Integer conversion for consistency
+    is_focus = 1 if data['is_focus'] else 0
     planned_duration = data['planned_duration']
     actual_duration = data['actual_duration']
     theme = data.get('theme', 'study') # 기본 테마는 'study'
     
     try:
         save_session_record(is_focus, theme, planned_duration, actual_duration)
+        print("Session saved successfully") # Debug log
         return jsonify({"message": "세션 기록이 성공적으로 저장되었습니다."}), 201
     except Exception as e:
+        print(f"Error saving session: {e}") # Debug log
         return jsonify({"message": f"데이터베이스 오류: {str(e)}"}), 500
 
 @app.route('/api/quest/claim', methods=['POST'])
 def claim_quest():
     """퀘스트 완료 보상을 스탯에 반영합니다."""
     data = request.json
+    print(f"Received quest claim: {data}") # Debug log
+    
     quest_id = data.get('quest_id')
     stat_type = data.get('stat_type') # 'intelligence', 'strength', 'focus'
     reward = data.get('reward', 0)
@@ -55,18 +62,26 @@ def claim_quest():
     theme = theme_map.get(stat_type, 'study')
     
     try:
-        # 실제 집중 시간으로 reward만큼 추가
-        save_session_record(True, theme, reward, reward)
+        # 실제 집중 시간으로 reward만큼 추가. is_focus=1 (True)
+        save_session_record(1, theme, reward, reward)
+        print(f"Quest reward saved: {reward} for {theme}") # Debug log
         return jsonify({"message": "퀘스트 보상이 지급되었습니다."}), 200
     except Exception as e:
+        print(f"Error claiming quest: {e}") # Debug log
         return jsonify({"message": str(e)}), 500
 
 @app.route('/api/session/recommendation', methods=['GET'])
 def get_recommendation():
     """AI 로직을 실행하여 다음 뽀모도로 시간을 제안합니다."""
     theme = request.args.get('theme', 'study') # 쿼리 파라미터로 테마를 받을 수 있음
-    recommendation = get_smart_recommendation(theme)
-    return jsonify(recommendation), 200
+    print(f"Generating recommendation for theme: {theme}") # Debug log
+    try:
+        recommendation = get_smart_recommendation(theme)
+        print(f"Recommendation: {recommendation}") # Debug log
+        return jsonify(recommendation), 200
+    except Exception as e:
+        print(f"Error generating recommendation: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
@@ -81,19 +96,27 @@ def get_stats():
         }
 
         if not df.empty:
+            # Ensure is_focus is numeric for filtering
+            # SQLite might return 1/0, but pandas might see it differently depending on driver
+            # Force conversion to numeric, coercing errors
+            df['is_focus'] = pd.to_numeric(df['is_focus'], errors='coerce')
+            
             # is_focus가 1인(집중 시간) 데이터만 필터링
             focus_df = df[df['is_focus'] == 1]
             
-            # 테마별로 그룹화하여 actual_duration 합계 계산
-            theme_stats = focus_df.groupby('theme')['actual_duration'].sum().to_dict()
-            
-            # 매핑
-            stats["intelligence"] = int(theme_stats.get('study', 0))
-            stats["strength"] = int(theme_stats.get('exercise', 0))
-            stats["focus"] = int(theme_stats.get('work', 0))
+            if not focus_df.empty:
+                # 테마별로 그룹화하여 actual_duration 합계 계산
+                theme_stats = focus_df.groupby('theme')['actual_duration'].sum().to_dict()
+                
+                # 매핑
+                stats["intelligence"] = int(theme_stats.get('study', 0))
+                stats["strength"] = int(theme_stats.get('exercise', 0))
+                stats["focus"] = int(theme_stats.get('work', 0))
         
+        print(f"Returning stats: {stats}") # Debug log
         return jsonify(stats)
     except Exception as e:
+        print(f"Error getting stats: {e}") # Debug log
         return jsonify({"intelligence": 0, "strength": 0, "focus": 0, "error": str(e)})
 
 if __name__ == '__main__':

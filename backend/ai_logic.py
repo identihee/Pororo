@@ -2,6 +2,7 @@
 
 from db import load_user_sessions
 import numpy as np
+import pandas as pd
 
 # --- AI 로직 상수 ---
 MIN_FOCUS = 10
@@ -15,7 +16,13 @@ def get_smart_recommendation(theme):
     
     # 1. 테마별 사용자 데이터 로드
     df = load_user_sessions(theme=theme)
-    focus_df = df[df['is_focus'] == 1].copy()
+    
+    if not df.empty:
+        # Ensure is_focus is numeric
+        df['is_focus'] = pd.to_numeric(df['is_focus'], errors='coerce')
+        focus_df = df[df['is_focus'] == 1].copy()
+    else:
+        focus_df = pd.DataFrame()
     
     recommended_focus = 25 # 기본 시작 시간 (표준 뽀모도로)
     message = f"새로운 {theme} 집중 세션을 시작해 보세요!"
